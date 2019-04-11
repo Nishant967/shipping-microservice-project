@@ -1,13 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"sync"
 	"context"
 	"net"
 	"log"
 	"google.golang.org/grpc/reflection"
-	pb "github.com/Nishant967/shipping-microservice-project/proto/consignment"
+	pb "github.com/Nishant967/shipping-microservice-project/consignment-service/proto/consignment"
 	"google.golang.org/grpc"
 
 )
@@ -18,6 +17,7 @@ const (
 
 type inventory interface {
 	Create(*pb.Consignment) (*pb.Consignment, error)
+	GetAll() []*pb.Consignment
 }
 
 type Inventory struct {
@@ -27,12 +27,16 @@ type Inventory struct {
 
 // Create a new consignment
 func (inv *Inventory) Create(consignment *pb.Consignment) (*pb.Consignment,error) {
-	fmt.Println("Creating consignment")
 	inv.mutex.Lock()
 	updated := append(inv.consignments, consignment)
 	inv.consignments = updated
 	inv.mutex.Unlock()
 	return consignment, nil
+}
+
+// GetAll consignments
+func (inv *Inventory) GetAll() []*pb.Consignment {
+	return inv.consignments
 }
 
 // Service should implement all of the methods to satisfy the service
@@ -58,6 +62,12 @@ func (s *service) CreateConsignment(ctx context.Context, req *pb.Consignment) (*
 	// Return matching the `Response` message we created in our
 	// protobuf definition.
 	return &pb.Response{Created: true, Consignment: consignment}, nil
+}
+
+// GetConsignments -
+func (s *service) GetConsignments(ctx context.Context, req *pb.GetRequest) (*pb.Response, error) {
+	consignments := s.inven.GetAll()
+	return &pb.Response{Consignments: consignments}, nil
 }
 
 func main() {
